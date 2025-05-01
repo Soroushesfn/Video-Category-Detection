@@ -20,7 +20,7 @@ def extract_date(date_str):
 # Paths
 RAW_DATA_PATH = 'tmp/raw_data.pkl'
 EMB_DIR = 'tmp/embeddings/'
-OUTPUT_PATH = 'temp/engineered_features.pkl'
+OUTPUT_PATH = 'tmp/engineered_features.pkl'
 
 # Load data
 print("[FEATURE_ENGINEERING][INFO]: Loading raw data...")
