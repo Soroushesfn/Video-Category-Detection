@@ -1,5 +1,4 @@
 import pandas as pd
-from sentence_transformers import SentenceTransformer
 
-df = pd.read_csv('database/Data.csv', encoding='ISO-8859-1')
-print(df['categoryID'].unique())
+df = pd.read_pickle('tmp/raw_data.pkl')
+print(df['category_id'].unique())
