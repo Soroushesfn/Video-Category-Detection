@@ -2,13 +2,18 @@
 import sqlite3
 import pandas as pd
 import os
+from database_connection import get_db_connection
 
 db_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "database", "dataset.db"))
-conn = sqlite3.connect(db_path)
+
+conn = get_db_connection(db_path)
+
+if conn:
+    tables = pd.read_sql("SELECT name FROM sqlite_master WHERE type='table';", conn)
+else:
+    print("Database connection failed.")
 
 
-query = "SELECT name FROM sqlite_master WHERE type='table';"
-tables = pd.read_sql(query, conn)
 
 dataframes = {}
 for table_name in tables['name']:
@@ -16,4 +21,6 @@ for table_name in tables['name']:
     dataframes[table_name] = df
 
 
-conn.close()
+if conn:
+    conn.close()
+
