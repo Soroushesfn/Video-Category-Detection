@@ -70,5 +70,5 @@ for col in bool_cols:
 
 print(df.shape)
 # # # Save result
-# print(f"[SUCCESS] Saving final features to: {OUTPUT_PATH}")
-# df.to_pickle(OUTPUT_PATH)
+print(f"[SUCCESS] Saving final features to: {OUTPUT_PATH}")
+df.to_pickle(OUTPUT_PATH)
