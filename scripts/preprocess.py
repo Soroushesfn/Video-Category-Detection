@@ -27,5 +27,7 @@ df[numeric_attributes] = scaler.fit_transform(df[numeric_attributes] )
 # correlation
 df = df.drop(["likes", "dislikes"], axis=1)
 
+print("Preprocessed succesfully")
+
 preprocess_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "tmp", "preprocess.pkl"))
 df.to_pickle(preprocess_path)
