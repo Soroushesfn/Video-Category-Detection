@@ -68,6 +68,7 @@ bool_cols = ["comments_disabled", "ratings_disabled", "video_error_or_removed"]
 for col in bool_cols:
     df[col] = df[col].astype(int)
 
-# # Save result
-print(f"[SUCCESS] Saving final features to: {OUTPUT_PATH}")
-df.to_pickle(OUTPUT_PATH)
+print(df.shape)
+# # # Save result
+# print(f"[SUCCESS] Saving final features to: {OUTPUT_PATH}")
+# df.to_pickle(OUTPUT_PATH)
