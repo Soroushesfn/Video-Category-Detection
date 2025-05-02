@@ -1,31 +1,8 @@
-name: Data Pipeline CI
+- name: List contents of workspace
+  run: ls -R
 
-on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
-
-jobs:
-  pipeline-check:
-    runs-on: ubuntu-latest
-
-    steps:
-    - uses: actions/checkout@v3
-
-    - name: Set up Python
-      uses: actions/setup-python@v3
-      with:
-        python-version: '3.12'
-
-    - name: Install dependencies
-      run: pip install -r requirements.txt
-
-    - name: Run pipeline script
-      run: python pipeline.py
-
-    - name: Upload tmp folder as artifact
-      uses: actions/upload-artifact@v2
-      with:
-        name: pipeline-tmp-files
-        path: tmp/
+- name: Upload tmp folder as artifact
+  uses: actions/upload-artifact@v3
+  with:
+    name: pipeline-tmp-files
+    path: tmp/
