@@ -1,26 +1,31 @@
-name: Test Upload Artifact
+name: Data Pipeline CI
 
 on:
   push:
     branches: [ main ]
+  pull_request:
+    branches: [ main ]
 
 jobs:
-  test-artifact:
+  pipeline-check:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
+    - uses: actions/checkout@v3
 
-    - name: Create test files
-      run: |
-        mkdir tmp
-        echo "file1" > tmp/file1.txt
-        echo "file2" > tmp/file2.txt
-        echo "file3" > tmp/file3.txt
-
-    - name: Upload artifact
-      uses: actions/upload-artifact@v3
+    - name: Set up Python
+      uses: actions/setup-python@v3
       with:
-        name: test-tmp-files
+        python-version: '3.12'
+
+    - name: Install dependencies
+      run: pip install -r requirements.txt
+
+    - name: Run pipeline script
+      run: python pipeline.py
+
+    - name: Upload tmp folder as artifact
+      uses: actions/upload-artifact@v2
+      with:
+        name: pipeline-tmp-files
         path: tmp/
