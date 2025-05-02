@@ -23,3 +23,9 @@ jobs:
 
     - name: Run pipeline script
       run: python pipeline.py
+
+    - name: Upload tmp folder as artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: pipeline-tmp-files
+        path: tmp/
