@@ -1,7 +1,7 @@
 import os
 import pandas as pd
 import tensorflow as tf
-from tensorflow.keras import layers, models, Input
+from keras import layers, models, Input, saving
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
 from sklearn.model_selection import StratifiedKFold
 
@@ -99,4 +99,4 @@ history = model.fit(
     callbacks=[early_stop, lr_scheduler]
 )
 
-model.save(tmp_path + '/3branchMlp_9157.h5')
+saving.save_model(model, tmp_path + '/3branchMlp_9157.keras')
