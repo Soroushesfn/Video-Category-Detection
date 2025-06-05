@@ -1,0 +1,34 @@
+name: Data Pipeline CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  pipeline-check:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v3
+      with:
+        python-version: '3.12'
+
+    - name: Install dependencies
+      run: pip install -r requirements.txt
+
+    - name: Run pipeline train
+      run: python pipeline.py --mode train
+
+    - name: Run pipeline test
+      run: python pipeline.py --mode test
+
+    - name: Upload tmp folder as artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: pipeline-tmp-files
+        path: tmp/
