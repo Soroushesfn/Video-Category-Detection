@@ -18,6 +18,7 @@ for table_name in tables['name']:
     dataframes[table_name] = df
 
 # Save as pickle
+print(dataframes['US_Trending_Videos'])
 dataframes['US_Trending_Videos'].to_pickle('tmp/raw_data.pkl')
 
 if conn:
