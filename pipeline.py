@@ -16,7 +16,7 @@ if args.mode == "train":
     subprocess.run(["python", "scripts/preprocess.py"])
     subprocess.run(["python", "scripts/splitData.py"])
     subprocess.run(["python", "scripts/train_model.py"])
-
+ 
 elif args.mode == "test":
     subprocess.run(["python", "scripts/make_prediction.py"])
 
