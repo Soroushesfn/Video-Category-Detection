@@ -13,7 +13,8 @@ OUTPUT_DIR = "tmp/embeddings/"
 
 # Load Data
 print("[EMBEDDING][INFO]: Loading data...")
-df = pd.read_pickle('tmp/raw_data.pkl')
+df = pd.read_pickle('tmp/raw_data.pkl') 
+print(df.shape)
 
 # Load embedding model
 print(f"[EMBEDDING][INFO]: Loading embedding model: {MODEL_NAME}...")
