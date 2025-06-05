@@ -18,8 +18,10 @@ for table_name in tables['name']:
     dataframes[table_name] = df
 
 # Save as pickle
-print(dataframes['US_Trending_Videos'])
-dataframes['US_Trending_Videos'].to_pickle('tmp/raw_data.pkl')
+df = dataframes['US_Trending_Videos']
+df_deduped = df.sort_values('views', ascending=False).drop_duplicates(subset='video_id', keep='first')
+print(df_deduped.shape)
+df_deduped.to_pickle('tmp/raw_data.pkl')
 
 if conn:
     conn.close()
