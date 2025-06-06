@@ -47,8 +47,7 @@ num_branch = layers.BatchNormalization()(num_branch)
 num_branch = layers.Dropout(0.3)(num_branch)
 
 # Fusion
-# x = layers.concatenate([title_branch, tags_branch, desc_branch, num_branch])
-x = layers.concatenate([title_branch, tags_branch, desc_branch])
+x = layers.concatenate([title_branch, tags_branch, desc_branch, num_branch])
 x = layers.Dense(256, activation='relu')(x)
 x = layers.Dropout(0.4)(x)
 x = layers.Dense(128, activation='relu')(x)

@@ -21,8 +21,6 @@ jobs:
     - name: Install dependencies
       run: pip install -r requirements.txt
 
-    - name: Create `tmp/` folder
-      run: mkdir -p tmp
 
     - name: Run pipeline train
       run: python pipeline.py --mode train
