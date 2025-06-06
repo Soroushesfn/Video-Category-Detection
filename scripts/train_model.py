@@ -5,7 +5,8 @@ from keras import layers, models, Input, saving
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
 from sklearn.model_selection import StratifiedKFold
 from sklearn.metrics import classification_report
-
+import mlflow
+import mlflow.tensorflow
 
 tmp_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "tmp"))
 X_train = pd.read_pickle(tmp_path+"/X_train.pkl")
@@ -24,6 +25,8 @@ X_title_val = X_val[[col for col in X_val.columns if col.startswith('title_emb')
 X_tags_val = X_val[[col for col in X_val.columns if col.startswith('tags_emb')]]
 X_desc_val = X_val[[col for col in X_val.columns if col.startswith('desc_emb')]]
 X_numeric_val = X_val[['views', 'comment_count', 'engagement_rate', 'like_dislike_ratio', 'tag_count']]
+
+
 
 title_input = Input(shape=(384,), name='title_embedding')
 tags_input = Input(shape=(384,), name='tags_embedding')
@@ -79,7 +82,23 @@ lr_scheduler = ReduceLROnPlateau(
     verbose=1
 )
 
+mlflow.set_experiment("Youtube_Category_Predictor")
 
+with mlflow.start_run(run_name="3Branch_MLP") as run:
+    # Log parameters
+    mlflow.log_param("embedding_dim", 384)
+    mlflow.log_param("num_dense_units", 128)
+    mlflow.log_param("dropout_rate", 0.3)
+    mlflow.log_param("fusion_dense_1", 256)
+    mlflow.log_param("fusion_dense_2", 128)
+    mlflow.log_param("batch_size", 64)
+    mlflow.log_param("epochs", 30)
+
+    # Log model structure
+    model.summary(print_fn=lambda x: mlflow.log_text(x + "\n", "model_summary.txt"))
+
+    # Enable automatic logging for TensorFlow / Keras
+    mlflow.tensorflow.autolog()
 
 history = model.fit(
     {
@@ -102,5 +121,19 @@ history = model.fit(
     batch_size=64,
     callbacks=[early_stop, lr_scheduler]
 )
+final_val_loss, final_val_acc, final_val_prec, final_val_rec = model.evaluate(
+        {
+            'title_embedding': X_title_val,
+            'tags_embedding': X_tags_val,
+            'description_embedding': X_desc_val,
+            'numeric_features': X_numeric_val
+        },
+        y_val, verbose=0)
+
+mlflow.log_metric("val_loss", final_val_loss)
+mlflow.log_metric("val_accuracy", final_val_acc)
+mlflow.log_metric("val_precision", final_val_prec)
+mlflow.log_metric("val_recall", final_val_rec)
+mlflow.keras.log_model(model, "3branchMlp_model")
 
 saving.save_model(model, tmp_path + '/3branchMlp_9157.keras')
