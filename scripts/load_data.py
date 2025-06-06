@@ -5,6 +5,7 @@ from database_connection import get_db_connection
 
 TABLE_NAME = 'US_Trending_Videos'
 db_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "database", "dataset.db"))
+tmp_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "tmp"))
 conn = get_db_connection(db_path)
 
 if conn:
@@ -21,7 +22,7 @@ for table_name in tables['name']:
 df = dataframes['US_Trending_Videos']
 df_deduped = df.sort_values('views', ascending=False).drop_duplicates(subset='video_id', keep='first')
 print(df_deduped.shape)
-df_deduped.to_pickle('tmp/raw_data.pkl')
+df_deduped.to_pickle(tmp_path + '/raw_data.pkl')
 
 if conn:
     conn.close()
