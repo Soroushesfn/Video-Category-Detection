@@ -1,0 +1,15 @@
+artifact_uri: file:///D:/UT/Data-Science/phase2/github/Project_P2/mlruns/697499363792786639/bd7f9d3e01a142c5beb1d2ffaa2c13c2/artifacts
+end_time: 1749211699987
+entry_point_name: ''
+experiment_id: '697499363792786639'
+lifecycle_stage: active
+run_id: bd7f9d3e01a142c5beb1d2ffaa2c13c2
+run_name: 3Branch_MLP
+run_uuid: bd7f9d3e01a142c5beb1d2ffaa2c13c2
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1749211699818
+status: 3
+tags: []
+user_id: ALIENWARE

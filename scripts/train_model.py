@@ -80,6 +80,7 @@ lr_scheduler = ReduceLROnPlateau(
 )
 
 
+
 history = model.fit(
     {
         'title_embedding': X_title_train,

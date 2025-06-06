@@ -19,6 +19,7 @@ if args.mode == "train":
  
 elif args.mode == "test":
     subprocess.run(["python", "scripts/make_prediction.py"])
+    subprocess.run(["python", "scripts/predictions.py"])
 
 else:
     print("No valid mode provided — doing nothing.")

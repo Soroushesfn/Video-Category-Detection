@@ -11,11 +11,6 @@ y_test = pd.read_pickle(tmp_path+"/y_test.pkl")
 model = load_model(tmp_path + '/3branchMlp_9157.keras')
 
 
-print(X_test.head())
-print(y_test.head())
-print(X_test.shape, y_test.shape)
-print(X_test.describe())
-
 X_title_test = X_test[[col for col in X_test.columns if col.startswith('title_emb')]]
 X_tags_test = X_test[[col for col in X_test.columns if col.startswith('tags_emb')]]
 X_desc_test = X_test[[col for col in X_test.columns if col.startswith('desc_emb')]]
