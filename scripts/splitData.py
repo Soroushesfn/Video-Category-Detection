@@ -5,16 +5,16 @@ import pandas as pd
 folder_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "tmp", "preprocess.pkl"))
 
 data_df = pd.read_pickle(folder_path)
-
-data_df.columns = list(data_df.columns[: len(data_df.columns) - 16]) + ['cat_' + str(num) for num in range(16)]
+cat_count = len([col for col in data_df.columns if col.startswith('cat_')])
+data_df.columns = list(data_df.columns[: len(data_df.columns) - cat_count]) + ['cat_' + str(num) for num in range(cat_count)]
 
 df_deduped = data_df.sort_values('views', ascending=False).drop_duplicates(subset='video_id', keep='first')
 
 remove_columns = ['video_id', 'channel_title', 'trending_date', 'publish_date', 'publish_hour']
 tmp_df = df_deduped.drop(remove_columns, axis=1)
-
-y_df = tmp_df[['cat_' + str(num) for num in range(16)]]
-X_df = tmp_df.drop(['cat_' + str(num) for num in range(16)], axis=1)
+tmp_df = tmp_df[tmp_df['cat_15'] != 1]
+y_df = tmp_df[['cat_' + str(num) for num in range(cat_count)]]
+X_df = tmp_df.drop(['cat_' + str(num) for num in range(cat_count)], axis=1)
 
 
 

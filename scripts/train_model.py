@@ -10,6 +10,8 @@ X_train = pd.read_pickle(tmp_path+"/X_train.pkl")
 X_val = pd.read_pickle(tmp_path+"/X_val.pkl")
 y_train = pd.read_pickle(tmp_path+"/y_train.pkl")
 y_val = pd.read_pickle(tmp_path+"/y_val.pkl")
+cat_count = len([col for col in y_train.columns if col.startswith('cat_')])
+
 
 X_title_train = X_train[[col for col in X_train.columns if col.startswith('title_emb')]]
 X_tags_train = X_train[[col for col in X_train.columns if col.startswith('tags_emb')]]
@@ -53,7 +55,7 @@ x = layers.Dense(128, activation='relu')(x)
 x = layers.Dropout(0.3)(x)
 
 # Output layer
-output = layers.Dense(16, activation='softmax', name='category_output')(x)
+output = layers.Dense(cat_count, activation='softmax', name='category_output')(x)
 
 model = models.Model(inputs=[title_input, tags_input, desc_input, numeric_input], outputs=output)
 
