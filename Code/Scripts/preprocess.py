@@ -1,33 +1,43 @@
-import pandas as pd
-import os
+"""Normalize numeric features and remove redundant fields."""
+
 import numpy as np
-from sklearn.preprocessing import StandardScaler
-from sklearn.preprocessing import MinMaxScaler
+import pandas as pd
+from sklearn.preprocessing import MinMaxScaler, StandardScaler
+
+from paths import TMP_DIR
 
 
-numeric_attributes = list(["views", "publish_hour", "likes", "dislikes", "comment_count", "engagement_rate", "like_dislike_ratio", "tag_count"])
+NUMERIC_COLUMNS = (
+    "views",
+    "publish_hour",
+    "likes",
+    "dislikes",
+    "comment_count",
+    "engagement_rate",
+    "like_dislike_ratio",
+    "tag_count",
+)
 
-eng_feature_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "tmp", "engineered_features.pkl"))
-df = pd.read_pickle(eng_feature_path)
 
-# unvaluable columns
-df = df.drop(['comments_disabled','ratings_disabled', 'video_error_or_removed'], axis=1)
+def main() -> None:
+    dataframe = pd.read_pickle(TMP_DIR / "engineered_features.pkl")
+    dataframe = dataframe.drop(
+        columns=[
+            "comments_disabled",
+            "ratings_disabled",
+            "video_error_or_removed",
+        ]
+    ).drop_duplicates()
 
-df = df.drop_duplicates()
+    numeric = dataframe.loc[:, NUMERIC_COLUMNS].apply(np.log1p)
+    numeric = MinMaxScaler().fit_transform(numeric)
+    dataframe.loc[:, NUMERIC_COLUMNS] = StandardScaler().fit_transform(numeric)
+    dataframe = dataframe.drop(columns=["likes", "dislikes"])
 
-# normalization and standardization
-df[numeric_attributes] = df[numeric_attributes].apply(lambda x: np.log1p(x))
+    output_path = TMP_DIR / "preprocessed.pkl"
+    dataframe.to_pickle(output_path)
+    print(f"[PREPROCESS] Saved {dataframe.shape} matrix to {output_path}")
 
-scaler = MinMaxScaler()
-df[numeric_attributes] = scaler.fit_transform(df[numeric_attributes])
 
-scaler = StandardScaler()
-df[numeric_attributes] = scaler.fit_transform(df[numeric_attributes] )
-
-# correlation
-df = df.drop(["likes", "dislikes"], axis=1)
-
-print("Preprocessed succesfully")
-
-preprocess_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "tmp", "preprocess.pkl"))
-df.to_pickle(preprocess_path)
+if __name__ == "__main__":
+    main()

@@ -1,32 +1,30 @@
-import os
-import numpy as np
+"""Evaluate the trained classifier and save its predictions."""
+
 import pandas as pd
 from keras.models import load_model
 from sklearn.metrics import classification_report
 
-
-tmp_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "tmp"))
-X_test = pd.read_pickle(tmp_path+"/X_test.pkl")
-y_test = pd.read_pickle(tmp_path+"/y_test.pkl")
-model = load_model(tmp_path + '/3branchMlp_9157.keras')
+from paths import MODEL_DIR, TMP_DIR
+from train_model import select_inputs
 
 
-X_title_test = X_test[[col for col in X_test.columns if col.startswith('title_emb')]]
-X_tags_test = X_test[[col for col in X_test.columns if col.startswith('tags_emb')]]
-X_desc_test = X_test[[col for col in X_test.columns if col.startswith('desc_emb')]]
-X_numeric_test = X_test[['views', 'comment_count', 'engagement_rate', 'like_dislike_ratio', 'tag_count']]
+def main() -> None:
+    x_test = pd.read_pickle(TMP_DIR / "X_test.pkl")
+    y_test = pd.read_pickle(TMP_DIR / "y_test.pkl")
+    model_path = MODEL_DIR / "youtube_category_classifier.keras"
+    if not model_path.exists():
+        # Retain compatibility with the original published checkpoint.
+        model_path = MODEL_DIR / "3branchMlp_9157.keras"
+    model = load_model(model_path)
+
+    probabilities = model.predict(select_inputs(x_test), verbose=1)
+    true_classes = y_test.to_numpy().argmax(axis=1)
+    predicted_classes = probabilities.argmax(axis=1)
+    pd.DataFrame({"prediction": predicted_classes}).to_csv(
+        TMP_DIR / "predictions.csv", index=False
+    )
+    print(classification_report(true_classes, predicted_classes, digits=4))
 
 
-y_pred = model.predict({
-    'title_embedding': X_title_test,
-    'tags_embedding': X_tags_test,
-    'description_embedding': X_desc_test,
-    'numeric_features': X_numeric_test
-}, verbose=1)
-
-
-y_true_classes = y_test.to_numpy().argmax(axis=1)
-y_pred_classes = y_pred.argmax(axis=1)
-y_pred_df = pd.DataFrame({'prediction': y_pred_classes})
-y_pred_df.to_csv(tmp_path+ "/prediction.csv")
-print(classification_report(y_true_classes, y_pred_classes, digits=4))
+if __name__ == "__main__":
+    main()

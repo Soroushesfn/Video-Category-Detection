@@ -1,15 +1,25 @@
+"""Merge the original and supplemental YouTube CSV exports."""
+
 import pandas as pd
 
-df1 = pd.read_csv('database/OrgData.csv', encoding='ISO-8859-1', on_bad_lines='skip')
-df2 = pd.read_csv('database/NewData.csv', encoding='ISO-8859-1', on_bad_lines='skip')    
+from paths import DATABASE_DIR
 
-df2['publish_time'] = pd.to_datetime(df2['publish_time'])
-df2['publish_date'] = df2['publish_time'].dt.date
-df2['publish_hour'] = df2['publish_time'].dt.hour
-df2.drop(['publish_time', 'thumbnail_link'], inplace=True, axis=1)
 
-df2 = df2[df1.columns]
-merged_df = pd.concat([df1, df2], ignore_index=True)
-merged_df.to_csv('database/Data.csv', index=False)
+def main() -> None:
+    original = pd.read_csv(
+        DATABASE_DIR / "OrgData.csv", encoding="ISO-8859-1", on_bad_lines="skip"
+    )
+    supplemental = pd.read_csv(
+        DATABASE_DIR / "NewData.csv", encoding="ISO-8859-1", on_bad_lines="skip"
+    )
+    supplemental["publish_time"] = pd.to_datetime(supplemental["publish_time"])
+    supplemental["publish_date"] = supplemental["publish_time"].dt.date
+    supplemental["publish_hour"] = supplemental["publish_time"].dt.hour
+    supplemental = supplemental.drop(columns=["publish_time", "thumbnail_link"])
+    merged = pd.concat([original, supplemental[original.columns]], ignore_index=True)
+    merged.to_csv(DATABASE_DIR / "Data.csv", index=False)
+    print(f"[MERGE] Saved {len(merged):,} rows")
 
-print(df1.shape, df2.shape, merged_df.shape)
+
+if __name__ == "__main__":
+    main()

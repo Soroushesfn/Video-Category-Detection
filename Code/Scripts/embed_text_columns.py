@@ -1,42 +1,37 @@
-import pandas as pd
+"""Encode video text fields with a pretrained sentence transformer."""
+
 import numpy as np
-import os
+import pandas as pd
 from sentence_transformers import SentenceTransformer
-import pickle
 
-# Meta data
-# Columns
-TEXTUAL_COLUMNS = ["title", "tags", "description"]
-# Embedding model
-MODEL_NAME = "all-MiniLM-L6-v2"
-OUTPUT_DIR = "tmp/embeddings/"
+from paths import EMBEDDING_DIR, TMP_DIR, create_runtime_directories
 
-# Load Data
-print("[EMBEDDING][INFO]: Loading data...")
-df = pd.read_pickle('tmp/raw_data.pkl') 
-print(df.shape)
 
-# Load embedding model
-print(f"[EMBEDDING][INFO]: Loading embedding model: {MODEL_NAME}...")
-model = SentenceTransformer(MODEL_NAME)
+TEXT_COLUMNS = ("title", "tags", "description")
+MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
 
-# Clean tags
-def clean_tags(text):
-    return " ".join(tag.replace('"', '') for tag in str(text).split('|'))
 
-# Embedding each column
-for column in TEXTUAL_COLUMNS:
-    print(f"[EMBEDDING][INFO]: Embedding column: {column}...")
-    
-    if column == "tags":
-        texts = df[column].fillna("").apply(clean_tags).tolist()
-    else:
-        texts = df[column].fillna("").astype(str).tolist()
-    
-    # perform embedding
-    embeddings = model.encode(texts, show_progress_bar=True, batch_size=32)
-    
-    # Save
-    out_path = OUTPUT_DIR + f"{column}_embeddings.npy"
-    np.save(out_path, embeddings)
-    print(f"[EMBEDDING][SUCCESS]: Saved embeddings to: {out_path}")
+def clean_tags(text: object) -> str:
+    return " ".join(tag.replace('"', "") for tag in str(text).split("|"))
+
+
+def main() -> None:
+    create_runtime_directories()
+    dataframe = pd.read_pickle(TMP_DIR / "raw_data.pkl")
+    model = SentenceTransformer(MODEL_NAME)
+
+    for column in TEXT_COLUMNS:
+        values = dataframe[column].fillna("")
+        texts = (
+            values.map(clean_tags).tolist()
+            if column == "tags"
+            else values.astype(str).tolist()
+        )
+        embeddings = model.encode(texts, show_progress_bar=True, batch_size=32)
+        output_path = EMBEDDING_DIR / f"{column}_embeddings.npy"
+        np.save(output_path, embeddings)
+        print(f"[EMBEDDING] Saved {column} embeddings to {output_path}")
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+.DS_Store
+.env
+.idea/
+.ipynb_checkpoints/
+.mlflow/
+.pytest_cache/
+.ruff_cache/
+.venv/
+mlruns/
+tmp/

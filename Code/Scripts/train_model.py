@@ -1,139 +1,135 @@
-import os
-import pandas as pd
-import tensorflow as tf
-from keras import layers, models, Input, saving
-from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
-from sklearn.model_selection import StratifiedKFold
-from sklearn.metrics import classification_report
+"""Train the multi-branch category-classification network."""
+
 import mlflow
 import mlflow.tensorflow
+import pandas as pd
+import tensorflow as tf
+from keras import Input, layers, models
+from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
 
-tmp_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "tmp"))
-X_train = pd.read_pickle(tmp_path+"/X_train.pkl")
-X_val = pd.read_pickle(tmp_path+"/X_val.pkl")
-y_train = pd.read_pickle(tmp_path+"/y_train.pkl")
-y_val = pd.read_pickle(tmp_path+"/y_val.pkl")
-cat_count = len([col for col in y_train.columns if col.startswith('cat_')])
-
-
-X_title_train = X_train[[col for col in X_train.columns if col.startswith('title_emb')]]
-X_tags_train = X_train[[col for col in X_train.columns if col.startswith('tags_emb')]]
-X_desc_train = X_train[[col for col in X_train.columns if col.startswith('desc_emb')]]
-X_numeric_train = X_train[['views', 'comment_count', 'engagement_rate', 'like_dislike_ratio', 'tag_count']]
-
-X_title_val = X_val[[col for col in X_val.columns if col.startswith('title_emb')]]
-X_tags_val = X_val[[col for col in X_val.columns if col.startswith('tags_emb')]]
-X_desc_val = X_val[[col for col in X_val.columns if col.startswith('desc_emb')]]
-X_numeric_val = X_val[['views', 'comment_count', 'engagement_rate', 'like_dislike_ratio', 'tag_count']]
+from paths import MODEL_DIR, TMP_DIR, create_runtime_directories
 
 
-
-title_input = Input(shape=(384,), name='title_embedding')
-tags_input = Input(shape=(384,), name='tags_embedding')
-desc_input = Input(shape=(384,), name='description_embedding')
-numeric_input = Input(shape=(5,), name='numeric_features')
-
-
-def embedding_branch(input_tensor):
-    x = layers.Dense(128, activation='relu')(input_tensor)
-    x = layers.BatchNormalization()(x)
-    x = layers.Dropout(0.3)(x)
-    return x
-
-
-# Embedding path
-title_branch = embedding_branch(title_input)
-tags_branch = embedding_branch(tags_input)
-desc_branch = embedding_branch(desc_input)
-
-# Numeric path
-num_branch = layers.Dense(64, activation='relu')(numeric_input)
-num_branch = layers.BatchNormalization()(num_branch)
-num_branch = layers.Dropout(0.3)(num_branch)
-
-# Fusion
-x = layers.concatenate([title_branch, tags_branch, desc_branch, num_branch])
-x = layers.Dense(256, activation='relu')(x)
-x = layers.Dropout(0.4)(x)
-x = layers.Dense(128, activation='relu')(x)
-x = layers.Dropout(0.3)(x)
-
-# Output layer
-output = layers.Dense(cat_count, activation='softmax', name='category_output')(x)
-
-model = models.Model(inputs=[title_input, tags_input, desc_input, numeric_input], outputs=output)
-
-model.compile(optimizer='adam',
-              loss='categorical_crossentropy',
-              metrics=['accuracy', tf.keras.metrics.Precision(), tf.keras.metrics.Recall()])
-
-early_stop = EarlyStopping(
-    monitor='val_loss',
-    patience=10,
-    restore_best_weights=True,
-    verbose=1
+EMBEDDING_DIMENSION = 384
+NUMERIC_FEATURES = (
+    "views",
+    "comment_count",
+    "engagement_rate",
+    "like_dislike_ratio",
+    "tag_count",
 )
 
-lr_scheduler = ReduceLROnPlateau(
-    monitor='val_loss',
-    factor=0.2,
-    patience=4,
-    min_lr=1e-6,
-    verbose=1
-)
 
-mlflow.set_experiment("Youtube_Category_Predictor")
+def select_inputs(dataframe: pd.DataFrame) -> dict[str, pd.DataFrame]:
+    """Split the feature matrix into the four model branches."""
+    return {
+        "title_embedding": dataframe.filter(regex=r"^title_emb"),
+        "tags_embedding": dataframe.filter(regex=r"^tags_emb"),
+        "description_embedding": dataframe.filter(regex=r"^desc_emb"),
+        "numeric_features": dataframe.loc[:, NUMERIC_FEATURES],
+    }
 
-with mlflow.start_run(run_name="3Branch_MLP") as run:
-    # Log parameters
-    mlflow.log_param("embedding_dim", 384)
-    mlflow.log_param("num_dense_units", 128)
-    mlflow.log_param("dropout_rate", 0.3)
-    mlflow.log_param("fusion_dense_1", 256)
-    mlflow.log_param("fusion_dense_2", 128)
-    mlflow.log_param("batch_size", 64)
-    mlflow.log_param("epochs", 30)
 
-    # Log model structure
-    model.summary(print_fn=lambda x: mlflow.log_text(x + "\n", "model_summary.txt"))
+def build_model(category_count: int) -> models.Model:
+    title_input = Input((EMBEDDING_DIMENSION,), name="title_embedding")
+    tags_input = Input((EMBEDDING_DIMENSION,), name="tags_embedding")
+    description_input = Input((EMBEDDING_DIMENSION,), name="description_embedding")
+    numeric_input = Input((len(NUMERIC_FEATURES),), name="numeric_features")
 
-    # Enable automatic logging for TensorFlow / Keras
-    mlflow.tensorflow.autolog()
+    def embedding_branch(input_tensor):
+        branch = layers.Dense(128, activation="relu")(input_tensor)
+        branch = layers.BatchNormalization()(branch)
+        return layers.Dropout(0.3)(branch)
 
-history = model.fit(
-    {
-        'title_embedding': X_title_train,
-        'tags_embedding': X_tags_train,
-        'description_embedding': X_desc_train,
-        'numeric_features': X_numeric_train
-    },
-    y_train,
-    validation_data=(
-        {
-            'title_embedding': X_title_val,
-            'tags_embedding': X_tags_val,
-            'description_embedding': X_desc_val,
-            'numeric_features': X_numeric_val
-        },
-        y_val
-    ),
-    epochs=30,
-    batch_size=64,
-    callbacks=[early_stop, lr_scheduler]
-)
-final_val_loss, final_val_acc, final_val_prec, final_val_rec = model.evaluate(
-        {
-            'title_embedding': X_title_val,
-            'tags_embedding': X_tags_val,
-            'description_embedding': X_desc_val,
-            'numeric_features': X_numeric_val
-        },
-        y_val, verbose=0)
+    numeric_branch = layers.Dense(64, activation="relu")(numeric_input)
+    numeric_branch = layers.BatchNormalization()(numeric_branch)
+    numeric_branch = layers.Dropout(0.3)(numeric_branch)
 
-mlflow.log_metric("val_loss", final_val_loss)
-mlflow.log_metric("val_accuracy", final_val_acc)
-mlflow.log_metric("val_precision", final_val_prec)
-mlflow.log_metric("val_recall", final_val_rec)
-mlflow.keras.log_model(model, "3branchMlp_model")
+    combined = layers.concatenate(
+        [
+            embedding_branch(title_input),
+            embedding_branch(tags_input),
+            embedding_branch(description_input),
+            numeric_branch,
+        ]
+    )
+    combined = layers.Dense(256, activation="relu")(combined)
+    combined = layers.Dropout(0.4)(combined)
+    combined = layers.Dense(128, activation="relu")(combined)
+    combined = layers.Dropout(0.3)(combined)
+    output = layers.Dense(
+        category_count, activation="softmax", name="category_output"
+    )(combined)
 
-saving.save_model(model, tmp_path + '/3branchMlp_9157.keras')
+    model = models.Model(
+        inputs=[title_input, tags_input, description_input, numeric_input],
+        outputs=output,
+    )
+    model.compile(
+        optimizer="adam",
+        loss="categorical_crossentropy",
+        metrics=[
+            "accuracy",
+            tf.keras.metrics.Precision(name="precision"),
+            tf.keras.metrics.Recall(name="recall"),
+        ],
+    )
+    return model
+
+
+def main() -> None:
+    create_runtime_directories()
+    x_train = pd.read_pickle(TMP_DIR / "X_train.pkl")
+    x_val = pd.read_pickle(TMP_DIR / "X_val.pkl")
+    y_train = pd.read_pickle(TMP_DIR / "y_train.pkl")
+    y_val = pd.read_pickle(TMP_DIR / "y_val.pkl")
+    model = build_model(y_train.shape[1])
+
+    callbacks = [
+        EarlyStopping(
+            monitor="val_loss", patience=10, restore_best_weights=True, verbose=1
+        ),
+        ReduceLROnPlateau(
+            monitor="val_loss", factor=0.2, patience=4, min_lr=1e-6, verbose=1
+        ),
+    ]
+
+    mlflow.set_experiment("YouTube_Category_Predictor")
+    with mlflow.start_run(run_name="Multi_Branch_MLP"):
+        mlflow.log_params(
+            {
+                "embedding_dimension": EMBEDDING_DIMENSION,
+                "batch_size": 64,
+                "epochs": 30,
+                "random_state": 44,
+            }
+        )
+        mlflow.tensorflow.autolog()
+        model.fit(
+            select_inputs(x_train),
+            y_train,
+            validation_data=(select_inputs(x_val), y_val),
+            epochs=30,
+            batch_size=64,
+            callbacks=callbacks,
+        )
+        loss, accuracy, precision, recall = model.evaluate(
+            select_inputs(x_val), y_val, verbose=0
+        )
+        mlflow.log_metrics(
+            {
+                "validation_loss": loss,
+                "validation_accuracy": accuracy,
+                "validation_precision": precision,
+                "validation_recall": recall,
+            }
+        )
+
+        model_path = MODEL_DIR / "youtube_category_classifier.keras"
+        model.save(model_path)
+        mlflow.log_artifact(str(model_path))
+        print(f"[TRAIN] Saved model to {model_path}")
+
+
+if __name__ == "__main__":
+    main()

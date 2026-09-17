@@ -1,28 +1,42 @@
-import sqlite3
+"""Load and deduplicate the source dataset from SQLite."""
+
 import pandas as pd
-import os
+
 from database_connection import get_db_connection
+from paths import DATABASE_DIR, TMP_DIR, create_runtime_directories
 
-TABLE_NAME = 'US_Trending_Videos'
-db_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "database", "dataset.db"))
-tmp_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "tmp"))
-conn = get_db_connection(db_path)
 
-if conn:
-    tables = pd.read_sql("SELECT name FROM sqlite_master WHERE type='table';", conn)
-else:
-    print("Database connection failed.")
+TABLE_NAME = "US_Trending_Videos"
+DATABASE_PATH = DATABASE_DIR / "dataset.db"
 
-dataframes = {}
-for table_name in tables['name']:
-    df = pd.read_sql(f"SELECT * FROM {table_name}", conn)
-    dataframes[table_name] = df
 
-# Save as pickle
-df = dataframes['US_Trending_Videos']
-df_deduped = df.sort_values('views', ascending=False).drop_duplicates(subset='video_id', keep='first')
-print(df_deduped.shape)
-df_deduped.to_pickle(tmp_path + '/raw_data.pkl')
+def main() -> None:
+    create_runtime_directories()
+    if not DATABASE_PATH.exists():
+        raise FileNotFoundError(
+            f"Source database not found: {DATABASE_PATH}. "
+            "See the README for data setup instructions."
+        )
 
-if conn:
-    conn.close()
+    with get_db_connection(DATABASE_PATH) as connection:
+        available = {
+            row[0]
+            for row in connection.execute(
+                "SELECT name FROM sqlite_master WHERE type='table'"
+            )
+        }
+        if TABLE_NAME not in available:
+            raise ValueError(f"Table {TABLE_NAME!r} is missing from {DATABASE_PATH}")
+        dataframe = pd.read_sql_query(f'SELECT * FROM "{TABLE_NAME}"', connection)
+
+    deduplicated = (
+        dataframe.sort_values("views", ascending=False)
+        .drop_duplicates(subset="video_id", keep="first")
+        .reset_index(drop=True)
+    )
+    deduplicated.to_pickle(TMP_DIR / "raw_data.pkl")
+    print(f"[LOAD] Saved {len(deduplicated):,} unique videos")
+
+
+if __name__ == "__main__":
+    main()
