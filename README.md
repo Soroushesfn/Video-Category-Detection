@@ -55,6 +55,7 @@ python Code/Scripts/import_to_db.py
 ```
 
 Generated intermediate files are written to `tmp/` and excluded from version control.
+The root-level `pipeline.py` is a compatibility entry point for the existing CI workflow; when the private source database is absent, it performs a code-and-artifact smoke test instead of attempting to train.
 
 ## Repository structure
 
